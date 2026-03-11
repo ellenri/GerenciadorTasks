@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="GerenciadorTasks/GerenciadorTasks.csproj" />
+  <Project Path="GerenciadorTasksApi/GerenciadorTasksApi.csproj" />
+</Solution>
