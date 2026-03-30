@@ -34,8 +34,15 @@ public class AppDbContext : DbContext
                 .HasForeignKey(e => e.ParentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            entity.Navigation(e => e.CreatedTasks).UsePropertyAccessMode(PropertyAccessMode.Field);
-            entity.Navigation(e => e.AssignedTasks).UsePropertyAccessMode(PropertyAccessMode.Field);
+            entity.HasMany(e => e.CreatedTasks)
+                .WithOne(t => t.CreatedBy)
+                .HasForeignKey(t => t.CreatedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(e => e.AssignedTasks)
+                .WithOne(t => t.AssignedTo)
+                .HasForeignKey(t => t.AssignedToId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<TaskItem>(entity =>
@@ -45,16 +52,6 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Title).IsRequired().HasMaxLength(500);
             entity.Property(e => e.Description).IsRequired();
             entity.Property(e => e.Status).IsRequired();
-
-            entity.HasOne(e => e.CreatedBy)
-                .WithMany(u => u.CreatedTasks)
-                .HasForeignKey(e => e.CreatedById)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasOne(e => e.AssignedTo)
-                .WithMany(u => u.AssignedTasks)
-                .HasForeignKey(e => e.AssignedToId)
-                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(e => e.Justification)
                 .WithOne(j => j.TaskItem)
