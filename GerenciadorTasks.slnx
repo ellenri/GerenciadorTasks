@@ -3,4 +3,5 @@
   <Project Path="GerenciadorTasks.Core/GerenciadorTasks.Core.csproj" />
   <Project Path="GerenciadorTasks.Infrastructure/GerenciadorTasks.Infrastructure.csproj" />
   <Project Path="GerenciadorTasksApi/GerenciadorTasksApi.csproj" />
+  <Project Path="GerenciadorTasks/GerenciadorTasks.csproj" />
 </Solution>

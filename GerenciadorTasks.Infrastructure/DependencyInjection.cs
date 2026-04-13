@@ -1,3 +1,4 @@
+using GerenciadorTasks.Core.Interfaces;
 using GerenciadorTasks.Core.Interfaces.Repositories;
 using GerenciadorTasks.Infrastructure.Data;
 using GerenciadorTasks.Infrastructure.Repositories;
@@ -10,6 +11,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString)
     {
+
+
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString));
 
@@ -17,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<ITaskItemRepository, TaskItemRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IRewardRepository, RewardRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }

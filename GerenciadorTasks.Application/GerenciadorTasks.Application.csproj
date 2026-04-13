@@ -11,4 +11,10 @@
     <ProjectReference Include="..\GerenciadorTasks.Core\GerenciadorTasks.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="DTOs\Reward\" />
+    <Folder Include="DTOs\Notification\" />
+    <Folder Include="DTOs\Task\" />
+  </ItemGroup>
+
 </Project>
