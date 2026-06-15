@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(dotnet build:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet ef migrations add:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(dotnet tool install:*)",
+      "Bash(dotnet-ef migrations add:*)",
+      "Bash(dotnet-ef database update:*)",
+      "Bash(wsl.exe -d Ubuntu-24.04 -- bash -lc \"cd /root/projetos/GerenciadorTasks && dotnet ef database update --project GerenciadorTasks.Infrastructure --startup-project GerenciadorTasksApi --no-build 2>&1 | tail -15\")"
+    ]
+  }
+}
