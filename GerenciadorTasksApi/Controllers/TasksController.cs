@@ -1,6 +1,9 @@
 using GerenciadorTasks.Application.Dtos;
 using GerenciadorTasks.Application.Services;
+using GerenciadorTasks.Core.Exceptions;
 using GerenciadorTasks.Infrastructure.Persistence;
+using GerenciadorTasksApi.Security;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GerenciadorTasksApi.Controllers;
@@ -10,6 +13,7 @@ namespace GerenciadorTasksApi.Controllers;
 /// Rotas sob /api/tasks. Os verbos HTTP mapeiam para os casos de uso.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/tasks")]
 public class TasksController : ControllerBase
 {
@@ -36,7 +40,9 @@ public class TasksController : ControllerBase
     public async Task<ActionResult<TaskResponse>> Create(
         [FromBody] CreateTaskRequest request, CancellationToken ct)
     {
-        var created = await _service.CreateAsync(request, SeedData.DefaultParentId, ct);
+        var createdById = User.GetUserId()
+            ?? throw new DomainException("Usuário não autenticado.");
+        var created = await _service.CreateAsync(request, createdById, ct);
         // CreatedAtAction devolve 201 + header Location apontando para GetById.
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }

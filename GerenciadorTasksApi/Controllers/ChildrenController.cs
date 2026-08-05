@@ -1,11 +1,13 @@
 using GerenciadorTasks.Application.Dtos;
 using GerenciadorTasks.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GerenciadorTasksApi.Controllers;
 
 /// <summary>Endpoints REST para crianças. Rotas sob /api/children.</summary>
 [ApiController]
+[Authorize]
 [Route("api/children")]
 public class ChildrenController : ControllerBase
 {

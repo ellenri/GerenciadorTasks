@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\GerenciadorTasks.Core\GerenciadorTasks.Core.csproj" />
+    <ProjectReference Include="..\GerenciadorTasks.Application\GerenciadorTasks.Application.csproj" />
   </ItemGroup>
 
 </Project>
