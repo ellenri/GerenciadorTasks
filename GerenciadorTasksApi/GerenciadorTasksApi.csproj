@@ -8,6 +8,22 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+    <!--
+      Pin explícito para corrigir NU1903: o Microsoft.AspNetCore.OpenApi 10.0.4 arrasta
+      Microsoft.OpenApi 2.0.0, que tem vulnerabilidade conhecida (GHSA-v5pm-xwqc-g5wc).
+      Forçar 2.11.0 (mesma major, segura) resolve o aviso sem quebrar compatibilidade.
+    -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.11.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Camada Web (ponto mais externo). Conhece:
+      - Application: para resolver os serviços/use cases via injeção de dependência.
+      - Infrastructure: para registrar o DbContext e repositórios concretos no container.
+    -->
+    <ProjectReference Include="..\GerenciadorTasks.Application\GerenciadorTasks.Application.csproj" />
+    <ProjectReference Include="..\GerenciadorTasks.Infrastructure\GerenciadorTasks.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

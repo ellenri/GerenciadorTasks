@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Dependency Rule: Infrastructure conhece Application (para implementar
+      interfaces de repositório definidas lá) e Core (as entidades).
+      As setas sempre apontam para dentro.
+    -->
+    <ProjectReference Include="..\GerenciadorTasks.Application\GerenciadorTasks.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ORM: EF Core + provider SQLite. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" />
+    <!-- Pin para corrigir NU1903: o pacote SQLite arrasta SQLitePCLRaw.lib.e_sqlite3
+         2.1.11 (vulnerável, GHSA-2m69-gcr7-jv3q). 2.1.12 é a versão segura. -->
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.12" />
+  </ItemGroup>
+
+</Project>
