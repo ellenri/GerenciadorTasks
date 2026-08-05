@@ -50,7 +50,9 @@ using (var scope = app.Services.CreateScope())
     var sp = scope.ServiceProvider;
 
     var db = sp.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated(); // cria as tabelas na 1ª execução (sem migrations)
+    // Aplica migrations pendentes (cria o banco se não existir). Ao contrário de
+    // EnsureCreated, suporta evoluir o schema com novas migrations no futuro.
+    await db.Database.MigrateAsync();
 
     var children = sp.GetRequiredService<IChildRepository>();
     await SeedData.InitializeAsync(children);

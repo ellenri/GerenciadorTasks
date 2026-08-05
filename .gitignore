@@ -361,3 +361,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Banco SQLite local (criado pelo EF Core em runtime/design-time)
+*.db
+*.db-shm
+*.db-wal

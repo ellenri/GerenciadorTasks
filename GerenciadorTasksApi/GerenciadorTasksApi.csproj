@@ -7,6 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!--
+      Necessário para as ferramentas do EF Core (dotnet ef migrations/database).
+      PrivateAssets=all: é dependência só de design-time, não vai para o publish.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
     <!--
       Pin explícito para corrigir NU1903: o Microsoft.AspNetCore.OpenApi 10.0.4 arrasta
