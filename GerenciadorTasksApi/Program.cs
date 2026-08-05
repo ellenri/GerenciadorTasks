@@ -60,6 +60,7 @@ builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext
 builder.Services.AddScoped<ITaskRepository, EfTaskRepository>();
 builder.Services.AddScoped<IChildRepository, EfChildRepository>();
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
+builder.Services.AddScoped<IRewardRepository, EfRewardRepository>();
 
 // Hash de senhas.
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
@@ -68,6 +69,7 @@ builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<ChildService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<RewardService>();
 
 var app = builder.Build();
 
@@ -82,6 +84,7 @@ using (var scope = app.Services.CreateScope())
     await SeedData.InitializeAsync(
         sp.GetRequiredService<IUserRepository>(),
         sp.GetRequiredService<IChildRepository>(),
+        sp.GetRequiredService<IRewardRepository>(),
         sp.GetRequiredService<IPasswordHasher>(),
         sp.GetRequiredService<IUnitOfWork>());
 }

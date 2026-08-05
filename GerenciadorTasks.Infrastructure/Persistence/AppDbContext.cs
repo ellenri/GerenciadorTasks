@@ -15,6 +15,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<Child> Children => Set<Child>();
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<Reward> Rewards => Set<Reward>();
 
     // O EF injeta as opções (string de conexão, provider) via DI.
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -55,6 +56,15 @@ public class AppDbContext : DbContext, IUnitOfWork
             b.Property(u => u.Email).IsRequired().HasMaxLength(254);
             b.Property(u => u.PasswordHash).HasMaxLength(500);
             b.HasIndex(u => u.Email).IsUnique(); // e-mail não pode repetir
+        });
+
+        modelBuilder.Entity<Reward>(b =>
+        {
+            b.ToTable("Rewards");
+            b.HasKey(r => r.Id);
+            b.Property(r => r.Title).IsRequired().HasMaxLength(150);
+            b.Property(r => r.Description).HasMaxLength(1000);
+            b.Property(r => r.RequiredPoints).IsRequired();
         });
 
         base.OnModelCreating(modelBuilder);
