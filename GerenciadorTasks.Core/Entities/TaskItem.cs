@@ -98,6 +98,7 @@ public class TaskItem : BaseEntity
         if (Status == TaskStatus.Skipped)
             throw new DomainException("Não é possível concluir uma missão abandonada.");
 
+        Justification.Approve();
         Status = TaskStatus.Completed;
         CompletedAt = DateTime.UtcNow;
         Touch();
