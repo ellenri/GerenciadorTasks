@@ -59,7 +59,7 @@ public class AuthController : ControllerBase
     public IActionResult Me() => Ok(new
     {
         id = User.FindFirstValue(ClaimTypes.NameIdentifier),
-        name = User.FindFirstValue(ClaimTypes.Name),
+        fullName = User.FindFirstValue(ClaimTypes.Name),
         email = User.FindFirstValue(ClaimTypes.Email),
         role = User.FindFirstValue(ClaimTypes.Role)
     });
