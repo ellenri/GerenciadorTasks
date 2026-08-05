@@ -51,6 +51,22 @@ public class Child : BaseEntity
         Touch();
     }
 
+    /// <summary>
+    /// Desconta pontos ao resgatar uma recompensa. Não permite ficar negativo.
+    /// Usado por <see cref="Reward.Redeem"/>. Lança DomainException se o saldo
+    /// for insuficiente — quem chama deve tratar/propagar como erro de regra.
+    /// </summary>
+    public void DeductPoints(int points)
+    {
+        if (points < 0)
+            throw new DomainException("A quantidade de pontos não pode ser negativa.");
+        if (points > Points)
+            throw new DomainException("Pontos insuficientes para resgatar a recompensa.");
+
+        Points -= points;
+        Touch();
+    }
+
     public void Rename(string newFullName)
     {
         if (string.IsNullOrWhiteSpace(newFullName))

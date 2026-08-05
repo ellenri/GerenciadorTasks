@@ -1,16 +1,19 @@
-using GerenciadorTasks.Core.Enums;
 using GerenciadorTasks.Core.Exceptions;
 
 namespace GerenciadorTasks.Core.Entities;
 
+/// <summary>
+/// Justificativa (ex.: para não concluir/abandonar uma missão) associada a uma
+/// TaskItem. Entidade isolada — ainda sem fluxo de uso; pronta para quando o
+/// domínio cobrir aprovação/rejeição de justificativas.
+/// </summary>
 public class Justification : BaseEntity
 {
-    public string Reason { get; private set; }
+    public string Reason { get; private set; } = null!;
     public bool IsApproved { get; private set; }
     public DateTime? ReviewedAt { get; private set; }
 
     public Guid TaskItemId { get; private set; }
-    public TaskItem TaskItem { get; private set; } = null!;
 
     private Justification() { }
 
@@ -18,8 +21,10 @@ public class Justification : BaseEntity
     {
         if (string.IsNullOrWhiteSpace(reason))
             throw new DomainException("Justificativa é obrigatória.");
+        if (taskItemId == Guid.Empty)
+            throw new DomainException("A justificativa precisa estar associada a uma missão.");
 
-        Reason = reason;
+        Reason = reason.Trim();
         TaskItemId = taskItemId;
         IsApproved = false;
     }
@@ -31,7 +36,7 @@ public class Justification : BaseEntity
 
         IsApproved = true;
         ReviewedAt = DateTime.UtcNow;
-        SetUpdated();
+        Touch();
     }
 
     public void Reject()
@@ -40,6 +45,6 @@ public class Justification : BaseEntity
             throw new DomainException("Justificativa já foi aprovada, não pode ser rejeitada.");
 
         ReviewedAt = DateTime.UtcNow;
-        SetUpdated();
+        Touch();
     }
 }

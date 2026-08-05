@@ -96,6 +96,58 @@ public class ChildTests
     }
 
     [Fact]
+    public void DeductPoints_WithValidAmount_ShouldDecreasePoints()
+    {
+        // Arrange
+        var child = new Child("João", new DateOnly(2015, 3, 15));
+        child.AddPoints(30);
+
+        // Act
+        child.DeductPoints(12);
+
+        // Assert
+        Assert.Equal(18, child.Points);
+    }
+
+    [Fact]
+    public void DeductPoints_ToZero_ShouldBeAllowed()
+    {
+        // Arrange
+        var child = new Child("João", new DateOnly(2015, 3, 15));
+        child.AddPoints(20);
+
+        // Act: zera o saldo — limite inferior permitido
+        child.DeductPoints(20);
+
+        // Assert
+        Assert.Equal(0, child.Points);
+    }
+
+    [Fact]
+    public void DeductPoints_ExceedingBalance_ShouldThrowDomainException()
+    {
+        // Arrange
+        var child = new Child("João", new DateOnly(2015, 3, 15));
+        child.AddPoints(10);
+
+        // Act + Assert: tentar descontar mais do que tem não pode zerar negativamente
+        var ex = Assert.Throws<DomainException>(() => child.DeductPoints(25));
+        Assert.Contains("insuficiente", ex.Message.ToLower());
+        Assert.Equal(10, child.Points); // saldo intacto (consistência)
+    }
+
+    [Fact]
+    public void DeductPoints_WithNegativeAmount_ShouldThrowDomainException()
+    {
+        // Arrange
+        var child = new Child("João", new DateOnly(2015, 3, 15));
+        child.AddPoints(10);
+
+        // Act + Assert
+        Assert.Throws<DomainException>(() => child.DeductPoints(-5));
+    }
+
+    [Fact]
     public void Rename_WithValidName_ShouldUpdateFullName()
     {
         // Arrange
