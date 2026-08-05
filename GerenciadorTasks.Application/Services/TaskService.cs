@@ -17,13 +17,18 @@ public class TaskService
 {
     private readonly ITaskRepository _tasks;
     private readonly IChildRepository _children;
+    private readonly INotificationRepository _notifications;
     private readonly IUnitOfWork _unitOfWork;
 
-    // Construtor com injeção: o serviço recebe as dependências, não as cria.
-    public TaskService(ITaskRepository tasks, IChildRepository children, IUnitOfWork unitOfWork)
+    public TaskService(
+        ITaskRepository tasks,
+        IChildRepository children,
+        INotificationRepository notifications,
+        IUnitOfWork unitOfWork)
     {
         _tasks = tasks;
         _children = children;
+        _notifications = notifications;
         _unitOfWork = unitOfWork;
     }
 
@@ -89,6 +94,12 @@ public class TaskService
         // child.AddPoints() soma os pontos definidos pela prioridade da missão.
         task.Complete();
         child.AddPoints(task.RewardPoints);
+
+        // Avisa o responsável que criou a missão que ela foi concluída.
+        await _notifications.AddAsync(new Notification(
+            $"{child.FullName} concluiu \"{task.Title}\" (+{task.RewardPoints} pts)",
+            NotificationType.TaskCompleted,
+            task.CreatedById), ct);
 
         await _tasks.UpdateAsync(task, ct);
         await _children.UpdateAsync(child, ct);

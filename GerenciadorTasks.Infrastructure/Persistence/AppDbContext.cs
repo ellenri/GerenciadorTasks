@@ -16,6 +16,7 @@ public class AppDbContext : DbContext, IUnitOfWork
     public DbSet<TaskItem> Tasks => Set<TaskItem>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Reward> Rewards => Set<Reward>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     // O EF injeta as opções (string de conexão, provider) via DI.
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
@@ -65,6 +66,15 @@ public class AppDbContext : DbContext, IUnitOfWork
             b.Property(r => r.Title).IsRequired().HasMaxLength(150);
             b.Property(r => r.Description).HasMaxLength(1000);
             b.Property(r => r.RequiredPoints).IsRequired();
+        });
+
+        modelBuilder.Entity<Notification>(b =>
+        {
+            b.ToTable("Notifications");
+            b.HasKey(n => n.Id);
+            b.Property(n => n.Message).IsRequired().HasMaxLength(500);
+            b.Property(n => n.UserId).IsRequired();
+            b.HasIndex(n => n.UserId); // consulta por usuário é frequente
         });
 
         base.OnModelCreating(modelBuilder);

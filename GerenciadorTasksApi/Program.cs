@@ -61,6 +61,7 @@ builder.Services.AddScoped<ITaskRepository, EfTaskRepository>();
 builder.Services.AddScoped<IChildRepository, EfChildRepository>();
 builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddScoped<IRewardRepository, EfRewardRepository>();
+builder.Services.AddScoped<INotificationRepository, EfNotificationRepository>();
 
 // Hash de senhas.
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
@@ -70,6 +71,7 @@ builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<ChildService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RewardService>();
+builder.Services.AddScoped<NotificationService>();
 
 var app = builder.Build();
 

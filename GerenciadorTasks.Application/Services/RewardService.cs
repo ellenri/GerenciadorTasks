@@ -1,6 +1,7 @@
 using GerenciadorTasks.Application.Abstractions;
 using GerenciadorTasks.Application.Dtos;
 using GerenciadorTasks.Core.Entities;
+using GerenciadorTasks.Core.Enums;
 using GerenciadorTasks.Core.Exceptions;
 
 namespace GerenciadorTasks.Application.Services;
@@ -16,12 +17,18 @@ public class RewardService
 {
     private readonly IRewardRepository _rewards;
     private readonly IChildRepository _children;
+    private readonly INotificationRepository _notifications;
     private readonly IUnitOfWork _unitOfWork;
 
-    public RewardService(IRewardRepository rewards, IChildRepository children, IUnitOfWork unitOfWork)
+    public RewardService(
+        IRewardRepository rewards,
+        IChildRepository children,
+        INotificationRepository notifications,
+        IUnitOfWork unitOfWork)
     {
         _rewards = rewards;
         _children = children;
+        _notifications = notifications;
         _unitOfWork = unitOfWork;
     }
 
@@ -49,6 +56,12 @@ public class RewardService
             ?? throw new DomainException("Criança não encontrada.");
 
         reward.Redeem(child); // valida "já resgatada" e saldo (lança DomainException)
+
+        // Avisa o responsável que criou a recompensa que ela foi resgatada.
+        await _notifications.AddAsync(new Notification(
+            $"{child.FullName} resgatou \"{reward.Title}\" (-{reward.RequiredPoints} pts)",
+            NotificationType.RewardRedeemed,
+            reward.CreatedById), ct);
 
         await _rewards.UpdateAsync(reward, ct);
         await _children.UpdateAsync(child, ct);

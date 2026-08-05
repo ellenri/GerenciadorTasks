@@ -15,7 +15,7 @@ public class RewardServiceTests
     {
         var children = new FakeChildRepository();
         var rewards = new FakeRewardRepository();
-        var svc = new RewardService(rewards, children, new FakeUnitOfWork());
+        var svc = new RewardService(rewards, children, new FakeNotificationRepository(), new FakeUnitOfWork());
         return (svc, children, rewards);
     }
 
@@ -131,6 +131,15 @@ public class RewardServiceTests
     private sealed class FakeUnitOfWork : IUnitOfWork
     {
         public Task<int> SaveChangesAsync(CancellationToken ct = default) => Task.FromResult(0);
+    }
+
+    private sealed class FakeNotificationRepository : INotificationRepository
+    {
+        public Task<Core.Entities.Notification?> GetByIdAsync(Guid id, CancellationToken ct = default) => Task.FromResult<Core.Entities.Notification?>(null);
+        public Task<IReadOnlyList<Core.Entities.Notification>> GetByUserIdAsync(Guid userId, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<Core.Entities.Notification>>(Array.Empty<Core.Entities.Notification>());
+        public Task<int> CountUnreadAsync(Guid userId, CancellationToken ct = default) => Task.FromResult(0);
+        public Task AddAsync(Core.Entities.Notification notification, CancellationToken ct = default) => Task.CompletedTask;
+        public Task UpdateAsync(Core.Entities.Notification notification, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeRewardRepository : IRewardRepository
