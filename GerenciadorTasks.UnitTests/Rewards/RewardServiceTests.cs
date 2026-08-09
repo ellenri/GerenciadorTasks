@@ -2,6 +2,7 @@ using GerenciadorTasks.Application.Abstractions;
 using GerenciadorTasks.Application.Dtos;
 using GerenciadorTasks.Application.Services;
 using GerenciadorTasks.Core.Entities;
+using GerenciadorTasks.Core.Enums;
 using GerenciadorTasks.Core.Exceptions;
 
 namespace GerenciadorTasks.UnitTests.Rewards;
@@ -19,9 +20,14 @@ public class RewardServiceTests
         return (svc, children, rewards);
     }
 
-    private static Child MakeChild(int points)
+    private static Child MakeChild(int points, Guid? parentUserId = null, Guid? userId = null)
     {
-        var c = new Child("João", new DateOnly(2015, 3, 15));
+        var c = new Child(
+            "João",
+            new DateOnly(2015, 3, 15),
+            null,
+            parentUserId ?? Guid.NewGuid(),
+            userId ?? Guid.NewGuid());
         if (points > 0) c.AddPoints(points);
         return c;
     }
@@ -60,10 +66,10 @@ public class RewardServiceTests
         var (svc, children, _) = NewSut();
         var uid = Guid.NewGuid();
         var reward = await svc.CreateAsync(new CreateRewardRequest("Prêmio", "d", 50), uid, CancellationToken.None);
-        var child = MakeChild(80);
+        var child = MakeChild(80, parentUserId: uid);
         await children.AddAsync(child, CancellationToken.None);
 
-        var result = await svc.RedeemAsync(reward.Id, child.Id, CancellationToken.None);
+        var result = await svc.RedeemAsync(reward.Id, child.Id, uid, UserRole.Parent, CancellationToken.None);
 
         Assert.Equal(child.Id, result.RedeemedById);
         Assert.NotNull(result.RedeemedAt);
@@ -78,11 +84,11 @@ public class RewardServiceTests
         var (svc, children, _) = NewSut();
         var uid = Guid.NewGuid();
         var reward = await svc.CreateAsync(new CreateRewardRequest("Caro", "d", 200), uid, CancellationToken.None);
-        var child = MakeChild(50); // menos que 200
+        var child = MakeChild(50, parentUserId: uid); // menos que 200
         await children.AddAsync(child, CancellationToken.None);
 
         await Assert.ThrowsAsync<DomainException>(() =>
-            svc.RedeemAsync(reward.Id, child.Id, CancellationToken.None));
+            svc.RedeemAsync(reward.Id, child.Id, uid, UserRole.Parent, CancellationToken.None));
 
         // saldo intacto (a transação não confirma nada em caso de erro de regra)
         var updated = await children.GetByIdAsync(child.Id, CancellationToken.None);
@@ -97,7 +103,7 @@ public class RewardServiceTests
         await children.AddAsync(child, CancellationToken.None);
 
         await Assert.ThrowsAsync<DomainException>(() =>
-            svc.RedeemAsync(Guid.NewGuid(), child.Id, CancellationToken.None));
+            svc.RedeemAsync(Guid.NewGuid(), child.Id, Guid.NewGuid(), UserRole.Parent, CancellationToken.None));
     }
 
     [Fact]
@@ -108,7 +114,7 @@ public class RewardServiceTests
         var reward = await svc.CreateAsync(new CreateRewardRequest("X", "d", 10), uid, CancellationToken.None);
 
         await Assert.ThrowsAsync<DomainException>(() =>
-            svc.RedeemAsync(reward.Id, Guid.NewGuid(), CancellationToken.None));
+            svc.RedeemAsync(reward.Id, Guid.NewGuid(), uid, UserRole.Parent, CancellationToken.None));
     }
 
     [Fact]
@@ -117,13 +123,45 @@ public class RewardServiceTests
         var (svc, children, _) = NewSut();
         var uid = Guid.NewGuid();
         var reward = await svc.CreateAsync(new CreateRewardRequest("Único", "d", 10), uid, CancellationToken.None);
-        var child = MakeChild(100);
+        var child = MakeChild(100, parentUserId: uid);
         await children.AddAsync(child, CancellationToken.None);
 
-        await svc.RedeemAsync(reward.Id, child.Id, CancellationToken.None); // 1º resgate ok
+        await svc.RedeemAsync(reward.Id, child.Id, uid, UserRole.Parent, CancellationToken.None); // 1º resgate ok
 
         await Assert.ThrowsAsync<DomainException>(() =>
-            svc.RedeemAsync(reward.Id, child.Id, CancellationToken.None)); // 2º falha
+            svc.RedeemAsync(reward.Id, child.Id, uid, UserRole.Parent, CancellationToken.None)); // 2º falha
+    }
+
+    [Fact]
+    public async Task RedeemAsync_ChildCanRedeemForSelf()
+    {
+        var (svc, children, _) = NewSut();
+        var uid = Guid.NewGuid();
+        var reward = await svc.CreateAsync(new CreateRewardRequest("Prêmio", "d", 30), uid, CancellationToken.None);
+        var childId = Guid.NewGuid();
+        var childUserId = Guid.NewGuid();
+        var child = MakeChild(50, parentUserId: uid, userId: childUserId);
+        // sobrescreve o Id para podermos referenciar de forma estável
+        await children.AddAsync(child, CancellationToken.None);
+
+        var result = await svc.RedeemAsync(reward.Id, child.Id, childUserId, UserRole.Child, CancellationToken.None);
+
+        Assert.Equal(child.Id, result.RedeemedById);
+        var updated = await children.GetByIdAsync(child.Id, CancellationToken.None);
+        Assert.Equal(20, updated!.Points); // 50 - 30
+    }
+
+    [Fact]
+    public async Task RedeemAsync_ChildCannotRedeemForAnotherChild()
+    {
+        var (svc, children, _) = NewSut();
+        var uid = Guid.NewGuid();
+        var reward = await svc.CreateAsync(new CreateRewardRequest("Prêmio", "d", 10), uid, CancellationToken.None);
+        var other = MakeChild(100, parentUserId: uid, userId: Guid.NewGuid());
+        await children.AddAsync(other, CancellationToken.None);
+
+        await Assert.ThrowsAsync<DomainException>(() =>
+            svc.RedeemAsync(reward.Id, other.Id, Guid.NewGuid(), UserRole.Child, CancellationToken.None));
     }
 
     // ---- Fakes ----
@@ -158,8 +196,12 @@ public class RewardServiceTests
         private readonly Dictionary<Guid, Child> _store = new();
         public Task<Child?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => Task.FromResult(_store.TryGetValue(id, out var c) ? c : null);
+        public Task<Child?> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
+            => Task.FromResult(_store.Values.FirstOrDefault(c => c.UserId == userId));
         public Task<IReadOnlyList<Child>> ListAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Child>>(_store.Values.ToList());
+        public Task<IReadOnlyList<Child>> ListByParentAsync(Guid parentUserId, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Child>>(_store.Values.Where(c => c.ParentUserId == parentUserId).ToList());
         public Task AddAsync(Child child, CancellationToken ct = default) { _store[child.Id] = child; return Task.CompletedTask; }
         public Task UpdateAsync(Child child, CancellationToken ct = default) { _store[child.Id] = child; return Task.CompletedTask; }
     }

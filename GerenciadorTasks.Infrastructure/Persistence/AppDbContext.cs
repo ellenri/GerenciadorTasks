@@ -37,6 +37,11 @@ public class AppDbContext : DbContext, IUnitOfWork
             b.HasKey(c => c.Id);
             b.Property(c => c.FullName).IsRequired().HasMaxLength(150);
             b.Property(c => c.AvatarPath).HasMaxLength(500);
+            // Vínculos: toda criança tem um responsável (Parent) e um login próprio (Child).
+            b.Property(c => c.ParentUserId).IsRequired();
+            b.Property(c => c.UserId).IsRequired();
+            b.HasIndex(c => c.ParentUserId); // lista "crianças do pai X"
+            b.HasIndex(c => c.UserId).IsUnique(); // 1 login -> 1 perfil de criança
         });
 
         modelBuilder.Entity<TaskItem>(b =>

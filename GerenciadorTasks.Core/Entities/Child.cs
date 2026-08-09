@@ -4,6 +4,10 @@ namespace GerenciadorTasks.Core.Entities;
 
 /// <summary>
 /// Uma criança que recebe missões e acumula pontos (gamificação).
+///
+/// Vincula-se a um responsável (<see cref="ParentUserId"/>, User com Role=Parent)
+/// e a uma identidade de acesso (<see cref="UserId"/>, User com Role=Child) usada
+/// no login da própria criança.
 /// </summary>
 public class Child : BaseEntity
 {
@@ -14,6 +18,16 @@ public class Child : BaseEntity
     public string? AvatarPath { get; private set; }
     public int Points { get; private set; }
 
+    /// <summary>Responsável (User com Role=Parent) que cadastrou a criança.</summary>
+    public Guid ParentUserId { get; private set; }
+
+    /// <summary>Identidade de login da criança (User com Role=Child).</summary>
+    public Guid UserId { get; private set; }
+
+    /// <summary>
+    /// Construtor de compatibilidade (sem vínculos). Mantido para testes de domínio
+    /// e materialização do EF Core. O fluxo de produção usa a sobrecarga com vínculos.
+    /// </summary>
     public Child(string fullName, DateOnly birthDate, string? avatarPath = null)
         : base()
     {
@@ -28,6 +42,27 @@ public class Child : BaseEntity
         BirthDate = birthDate;
         AvatarPath = avatarPath;
         Points = 0;
+    }
+
+    /// <summary>
+    /// Construtor de produção: cria a criança já vinculada ao responsável e à
+    /// identidade de login dela. Estes vínculos são obrigatórios no cadastro real.
+    /// </summary>
+    public Child(
+        string fullName,
+        DateOnly birthDate,
+        string? avatarPath,
+        Guid parentUserId,
+        Guid userId)
+        : this(fullName, birthDate, avatarPath)
+    {
+        if (parentUserId == Guid.Empty)
+            throw new DomainException("A criança precisa estar vinculada a um responsável.");
+        if (userId == Guid.Empty)
+            throw new DomainException("A criança precisa ter um usuário de acesso (login).");
+
+        ParentUserId = parentUserId;
+        UserId = userId;
     }
 
     /// Idade calculada (propriedade somente-leitura derivada — não é armazenada no banco).

@@ -1,11 +1,18 @@
 using GerenciadorTasks.Application.Dtos;
 using GerenciadorTasks.Application.Services;
+using GerenciadorTasks.Core.Exceptions;
+using GerenciadorTasksApi.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace GerenciadorTasksApi.Controllers;
 
-/// <summary>Endpoints REST para crianças. Rotas sob /api/children.</summary>
+/// <summary>
+/// Endpoints REST para crianças. Rotas sob /api/children.
+///
+/// O cadastro (POST) é exclusivo do responsável (Role=Parent). A consulta é
+/// adaptada ao papel: o pai vê as crianças que cadastrou; a criança vê só a si.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/children")]
@@ -15,10 +22,32 @@ public class ChildrenController : ControllerBase
 
     public ChildrenController(ChildService service) => _service = service;
 
-    /// GET /api/children — lista todas as crianças.
+    /// GET /api/children — lista adaptada ao papel do usuário logado.
+    /// Parent: as crianças que cadastrou. Child: apenas a si mesma.
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ChildResponse>>> GetAll(CancellationToken ct)
-        => Ok(await _service.GetAllAsync(ct));
+    {
+        if (User.IsParent())
+        {
+            var parentUserId = User.GetUserId()!.Value;
+            return Ok(await _service.ListByParentAsync(parentUserId, ct));
+        }
+
+        // Criança logada: devolve uma lista contendo só o próprio perfil.
+        var me = await _service.GetByUserIdAsync(User.GetUserId()!.Value, ct);
+        return Ok(me is null ? Array.Empty<ChildResponse>() : new[] { me });
+    }
+
+    /// GET /api/children/me — perfil da própria criança logada (404 se não for criança).
+    [HttpGet("me")]
+    public async Task<ActionResult<ChildResponse>> GetMe(CancellationToken ct)
+    {
+        if (!User.IsChild())
+            return NotFound(new { message = "Apenas contas de criança têm perfil de criança." });
+
+        var me = await _service.GetByUserIdAsync(User.GetUserId()!.Value, ct);
+        return me is null ? NotFound() : Ok(me);
+    }
 
     /// GET /api/children/{id} — detalhe de uma criança (inclui pontos).
     [HttpGet("{id:guid}")]
@@ -28,12 +57,15 @@ public class ChildrenController : ControllerBase
         return child is null ? NotFound() : Ok(child);
     }
 
-    /// POST /api/children — cadastra uma nova criança (201 Created + Location).
+    /// POST /api/children — cadastra uma criança (com login próprio). Exclusivo do responsável.
     [HttpPost]
+    [Authorize(Roles = "Parent")]
     public async Task<ActionResult<ChildResponse>> Create(
         [FromBody] CreateChildRequest request, CancellationToken ct)
     {
-        var created = await _service.CreateAsync(request, ct);
+        var parentUserId = User.GetUserId()
+            ?? throw new DomainException("Responsável não autenticado.");
+        var created = await _service.CreateAsync(request, parentUserId, ct);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 }

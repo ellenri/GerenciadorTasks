@@ -14,8 +14,14 @@ public class EfChildRepository : IChildRepository
     public async Task<Child?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await _db.Children.FindAsync(new object[] { id }, ct);
 
+    public async Task<Child?> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
+        => await _db.Children.AsNoTracking().FirstOrDefaultAsync(c => c.UserId == userId, ct);
+
     public async Task<IReadOnlyList<Child>> ListAsync(CancellationToken ct = default)
         => await _db.Children.AsNoTracking().ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Child>> ListByParentAsync(Guid parentUserId, CancellationToken ct = default)
+        => await _db.Children.AsNoTracking().Where(c => c.ParentUserId == parentUserId).ToListAsync(ct);
 
     public Task AddAsync(Child child, CancellationToken ct = default)
     {

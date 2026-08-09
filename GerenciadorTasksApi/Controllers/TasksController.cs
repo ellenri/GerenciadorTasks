@@ -22,10 +22,17 @@ public class TasksController : ControllerBase
     // Injeção de dependência: o controller recebe o serviço pronto.
     public TasksController(TaskService service) => _service = service;
 
-    /// GET /api/tasks — lista todas as missões.
+    /// GET /api/tasks — lista adaptada ao papel do usuário logado.
+    /// Parent: missões que criou. Child: missões atribuídas a ela.
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<TaskResponse>>> GetAll(CancellationToken ct)
-        => Ok(await _service.GetAllAsync(ct));
+    {
+        var userId = User.GetUserId()!.Value;
+        var tasks = User.IsChild()
+            ? await _service.GetForChildAsync(userId, ct)
+            : await _service.GetForParentAsync(userId, ct);
+        return Ok(tasks);
+    }
 
     /// GET /api/tasks/{id} — detalhe de uma missão.
     [HttpGet("{id:guid}")]
@@ -35,8 +42,9 @@ public class TasksController : ControllerBase
         return task is null ? NotFound() : Ok(task);
     }
 
-    /// POST /api/tasks — cria uma missão (201 Created + Location).
+    /// POST /api/tasks — cria uma missão (201 Created + Location). Exclusivo do responsável.
     [HttpPost]
+    [Authorize(Roles = "Parent")]
     public async Task<ActionResult<TaskResponse>> Create(
         [FromBody] CreateTaskRequest request, CancellationToken ct)
     {

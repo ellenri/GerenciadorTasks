@@ -12,8 +12,14 @@ public class InMemoryChildRepository : IChildRepository
     public Task<Child?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => Task.FromResult(_store.TryGetValue(id, out var child) ? child : null);
 
+    public Task<Child?> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
+        => Task.FromResult(_store.Values.FirstOrDefault(c => c.UserId == userId));
+
     public Task<IReadOnlyList<Child>> ListAsync(CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<Child>>(_store.Values.ToList());
+
+    public Task<IReadOnlyList<Child>> ListByParentAsync(Guid parentUserId, CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<Child>>(_store.Values.Where(c => c.ParentUserId == parentUserId).ToList());
 
     public Task AddAsync(Child child, CancellationToken ct = default)
     {

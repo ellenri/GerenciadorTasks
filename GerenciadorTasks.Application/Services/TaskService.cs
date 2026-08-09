@@ -69,6 +69,23 @@ public class TaskService
         return tasks.Select(TaskResponse.From).ToList();
     }
 
+    /// <summary>Missões criadas por um responsável (visão do pai).</summary>
+    public async Task<IReadOnlyList<TaskResponse>> GetForParentAsync(Guid parentUserId, CancellationToken ct)
+    {
+        var tasks = await _tasks.ListAsync(ct);
+        return tasks.Where(t => t.CreatedById == parentUserId).Select(TaskResponse.From).ToList();
+    }
+
+    /// <summary>Missões atribuídas à criança logada (visão da criança).</summary>
+    public async Task<IReadOnlyList<TaskResponse>> GetForChildAsync(Guid childUserId, CancellationToken ct)
+    {
+        var child = await _children.GetByUserIdAsync(childUserId, ct);
+        if (child is null) return Array.Empty<TaskResponse>();
+
+        var tasks = await _tasks.ListAsync(ct);
+        return tasks.Where(t => t.AssignedToId == child.Id).Select(TaskResponse.From).ToList();
+    }
+
     public async Task<TaskResponse?> GetByIdAsync(Guid id, CancellationToken ct)
     {
         var task = await _tasks.GetByIdAsync(id, ct);
@@ -100,6 +117,15 @@ public class TaskService
             $"{child.FullName} concluiu \"{task.Title}\" (+{task.RewardPoints} pts)",
             NotificationType.TaskCompleted,
             task.CreatedById), ct);
+
+        // Avisa também a própria criança (se ela tem login próprio).
+        if (child.UserId != Guid.Empty)
+        {
+            await _notifications.AddAsync(new Notification(
+                $"Você concluiu \"{task.Title}\" e ganhou +{task.RewardPoints} pontos! 🎉",
+                NotificationType.TaskCompleted,
+                child.UserId), ct);
+        }
 
         await _tasks.UpdateAsync(task, ct);
         await _children.UpdateAsync(child, ct);
