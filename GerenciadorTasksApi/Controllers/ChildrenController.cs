@@ -57,6 +57,17 @@ public class ChildrenController : ControllerBase
         return child is null ? NotFound() : Ok(child);
     }
 
+    /// GET /api/children/{id}/edit — dados para edição (perfil + e-mail). Exclusivo do responsável dono.
+    [HttpGet("{id:guid}/edit")]
+    [Authorize(Roles = "Parent")]
+    public async Task<ActionResult<ChildResponse>> GetForEdit(Guid id, CancellationToken ct)
+    {
+        var parentUserId = User.GetUserId()
+            ?? throw new DomainException("Responsável não autenticado.");
+        var child = await _service.GetForEditAsync(id, parentUserId, ct);
+        return child is null ? NotFound() : Ok(child);
+    }
+
     /// POST /api/children — cadastra uma criança (com login próprio). Exclusivo do responsável.
     [HttpPost]
     [Authorize(Roles = "Parent")]
@@ -67,5 +78,17 @@ public class ChildrenController : ControllerBase
             ?? throw new DomainException("Responsável não autenticado.");
         var created = await _service.CreateAsync(request, parentUserId, ct);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
+
+    /// PUT /api/children/{id} — edita uma criança (perfil + e-mail/senha). Exclusivo do responsável.
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Parent")]
+    public async Task<ActionResult<ChildResponse>> Update(
+        Guid id, [FromBody] UpdateChildRequest request, CancellationToken ct)
+    {
+        var parentUserId = User.GetUserId()
+            ?? throw new DomainException("Responsável não autenticado.");
+        var updated = await _service.UpdateAsync(id, request, parentUserId, ct);
+        return updated is null ? NotFound() : Ok(updated);
     }
 }

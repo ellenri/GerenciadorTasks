@@ -115,4 +115,21 @@ public class Child : BaseEntity
         AvatarPath = avatarPath;
         Touch();
     }
+
+    /// <summary>
+    /// Atualiza os dados de perfil da criança (nome, data de nascimento e avatar).
+    /// Usado pela edição. Valida os mesmos invariantes do construtor.
+    /// </summary>
+    public void UpdateProfile(string fullName, DateOnly birthDate, string? avatarPath)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            throw new DomainException("O nome da criança é obrigatório.");
+        if (birthDate > DateOnly.FromDateTime(DateTime.UtcNow))
+            throw new DomainException("A data de nascimento não pode estar no futuro.");
+
+        FullName = fullName.Trim();
+        BirthDate = birthDate;
+        AvatarPath = avatarPath;
+        Touch();
+    }
 }

@@ -44,4 +44,25 @@ public class User : BaseEntity
         PasswordHash = passwordHash;
         Touch();
     }
+
+    /// <summary>Altera o nome do usuário (usado na edição do perfil).</summary>
+    public void Rename(string fullName)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+            throw new DomainException("O nome do usuário é obrigatório.");
+        FullName = fullName.Trim();
+        Touch();
+    }
+
+    /// <summary>
+    /// Altera o e-mail de acesso. Normaliza para minúsculas (igual ao cadastro).
+    /// A checagem de unicidade fica na camada de aplicação (precisa do repositório).
+    /// </summary>
+    public void ChangeEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            throw new DomainException("O e-mail do usuário é obrigatório.");
+        Email = email.Trim().ToLowerInvariant();
+        Touch();
+    }
 }
