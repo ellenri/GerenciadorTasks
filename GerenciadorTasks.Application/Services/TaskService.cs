@@ -136,4 +136,33 @@ public class TaskService
 
         return TaskResponse.From(task);
     }
+
+    /// <summary>
+    /// Cancela/abandona uma missão (status Skipped). Não concede pontos.
+    /// Avisa a criança de que a missão foi cancelada (se ela tem login próprio).
+    /// </summary>
+    public async Task<TaskResponse> SkipAsync(Guid taskId, CancellationToken ct)
+    {
+        var task = await _tasks.GetByIdAsync(taskId, ct)
+            ?? throw new DomainException("Missão não encontrada.");
+
+        var child = await _children.GetByIdAsync(task.AssignedToId, ct);
+
+        // task.Skip() valida o estado (não pode cancelar já concluída/cancelada).
+        task.Skip();
+
+        // Avisa a criança de que a missão foi cancelada.
+        if (child is not null && child.UserId != Guid.Empty)
+        {
+            await _notifications.AddAsync(new Notification(
+                $"A missão \"{task.Title}\" foi cancelada.",
+                NotificationType.TaskSkipped,
+                child.UserId), ct);
+        }
+
+        await _tasks.UpdateAsync(task, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return TaskResponse.From(task);
+    }
 }

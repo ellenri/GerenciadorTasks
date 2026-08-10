@@ -7,5 +7,6 @@ public enum NotificationType
     TaskRejected,
     TaskJustified,
     RewardUnlocked,
-    RewardRedeemed
+    RewardRedeemed,
+    TaskSkipped
 }

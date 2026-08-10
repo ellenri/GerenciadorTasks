@@ -60,4 +60,10 @@ public class TasksController : ControllerBase
     [HttpPost("{id:guid}/complete")]
     public async Task<ActionResult<TaskResponse>> Complete(Guid id, CancellationToken ct)
         => Ok(await _service.CompleteAsync(id, ct));
+
+    /// POST /api/tasks/{id}/skip — cancela/abandona a missão. Exclusivo do responsável.
+    [HttpPost("{id:guid}/skip")]
+    [Authorize(Roles = "Parent")]
+    public async Task<ActionResult<TaskResponse>> Skip(Guid id, CancellationToken ct)
+        => Ok(await _service.SkipAsync(id, ct));
 }
