@@ -98,6 +98,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 app.UseCors();
+app.UseStaticFiles();   // serve wwwroot/ (imagens de comprovação em /uploads/...)
 app.UseAuthentication();   // identifica o usuário a partir do cookie
 app.UseAuthorization();    // aplica [Authorize] / roles
 app.MapControllers();

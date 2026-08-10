@@ -93,13 +93,34 @@ public class TaskService
     }
 
     /// <summary>
-    /// Conclui uma missão E credita os pontos à criança.
-    ///
-    /// ATENÇÃO (gancho com a revisão): esta é a ORQUESTRAÇÃO entre agregados
-    /// que discutimos no Desafio 2! A entidade TaskItem só muda SEU estado;
-    /// a entidade Child só soma pontos. O serviço coordena as duas partes.
+    /// A criança envia a foto de comprovação. A missão passa a aguardar aprovação
+    /// do responsável (PendingReview). O responsável é notificado para analisar.
     /// </summary>
-    public async Task<TaskResponse> CompleteAsync(Guid taskId, CancellationToken ct)
+    public async Task<TaskResponse> SubmitAsync(Guid taskId, string imageUrl, CancellationToken ct)
+    {
+        var task = await _tasks.GetByIdAsync(taskId, ct)
+            ?? throw new DomainException("Missão não encontrada.");
+
+        var child = await _children.GetByIdAsync(task.AssignedToId, ct);
+
+        task.SubmitForReview(imageUrl);
+
+        // Avisa o responsável que há uma comprovação para analisar.
+        await _notifications.AddAsync(new Notification(
+            $"{child?.FullName ?? "A criança"} enviou a comprovação de \"{task.Title}\".",
+            NotificationType.TaskSubmitted,
+            task.CreatedById), ct);
+
+        await _tasks.UpdateAsync(task, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return TaskResponse.From(task);
+    }
+
+    /// <summary>
+    /// O responsável aprova a comprovação: conclui a missão E credita os pontos.
+    /// </summary>
+    public async Task<TaskResponse> ApproveAsync(Guid taskId, CancellationToken ct)
     {
         var task = await _tasks.GetByIdAsync(taskId, ct)
             ?? throw new DomainException("Missão não encontrada.");
@@ -107,31 +128,51 @@ public class TaskService
         var child = await _children.GetByIdAsync(task.AssignedToId, ct)
             ?? throw new DomainException("Criança não encontrada.");
 
-        // task.Complete() pode lançar DomainException (ex.: já concluída).
-        // child.AddPoints() soma os pontos definidos pela prioridade da missão.
-        task.Complete();
+        task.Approve();
         child.AddPoints(task.RewardPoints);
 
-        // Avisa o responsável que criou a missão que ela foi concluída.
         await _notifications.AddAsync(new Notification(
             $"{child.FullName} concluiu \"{task.Title}\" (+{task.RewardPoints} pts)",
             NotificationType.TaskCompleted,
             task.CreatedById), ct);
 
-        // Avisa também a própria criança (se ela tem login próprio).
         if (child.UserId != Guid.Empty)
         {
             await _notifications.AddAsync(new Notification(
-                $"Você concluiu \"{task.Title}\" e ganhou +{task.RewardPoints} pontos! 🎉",
+                $"Sua missão \"{task.Title}\" foi aprovada! +{task.RewardPoints} pontos 🎉",
                 NotificationType.TaskCompleted,
                 child.UserId), ct);
         }
 
         await _tasks.UpdateAsync(task, ct);
         await _children.UpdateAsync(child, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
 
-        // UM SaveChanges confirma AMBAS as mudanças atomicamente.
-        // Se algo falhar aqui, nada é gravado — consistência garantida (Desafio 2!).
+        return TaskResponse.From(task);
+    }
+
+    /// <summary>
+    /// O responsável rejeita a comprovação com um comentário. A missão volta para
+    /// InProgress e o comentário fica visível para a criança refazer.
+    /// </summary>
+    public async Task<TaskResponse> RejectAsync(Guid taskId, string comment, CancellationToken ct)
+    {
+        var task = await _tasks.GetByIdAsync(taskId, ct)
+            ?? throw new DomainException("Missão não encontrada.");
+
+        var child = await _children.GetByIdAsync(task.AssignedToId, ct);
+
+        task.Reject(comment);
+
+        if (child is not null && child.UserId != Guid.Empty)
+        {
+            await _notifications.AddAsync(new Notification(
+                $"Revise a missão \"{task.Title}\": {comment}",
+                NotificationType.TaskRejected,
+                child.UserId), ct);
+        }
+
+        await _tasks.UpdateAsync(task, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
         return TaskResponse.From(task);

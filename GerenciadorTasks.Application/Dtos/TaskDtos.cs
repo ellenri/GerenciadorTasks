@@ -37,7 +37,10 @@ public record TaskResponse(
     int RewardPoints,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    DateTime? CompletedAt)
+    DateTime? CompletedAt,
+    string? SubmissionImageUrl,
+    string? ReviewerComment,
+    DateTime? SubmittedAt)
 {
     /// Factory: constrói o DTO a partir da entidade de domínio.
     /// Centraliza o mapeamento em um lugar só (Single Responsibility).
@@ -56,5 +59,11 @@ public record TaskResponse(
         RewardPoints: t.RewardPoints,
         CreatedAt: t.CreatedAt,
         UpdatedAt: t.UpdatedAt,
-        CompletedAt: t.CompletedAt);
+        CompletedAt: t.CompletedAt,
+        SubmissionImageUrl: t.SubmissionImageUrl,
+        ReviewerComment: t.ReviewerComment,
+        SubmittedAt: t.SubmittedAt);
 }
+
+/// <summary>Payload para o responsável rejeitar uma comprovação (com comentário).</summary>
+public record RejectRequest(string Comment);

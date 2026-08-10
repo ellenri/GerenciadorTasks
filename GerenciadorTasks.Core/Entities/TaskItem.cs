@@ -28,6 +28,14 @@ public class TaskItem : BaseEntity
 
     public DateTime? CompletedAt { get; private set; }
 
+    // Fluxo de aprovação com comprovação por imagem:
+    /// <summary>Foto enviada pela criança como comprovação (URL relativa, ex.: "/uploads/abc.jpg").</summary>
+    public string? SubmissionImageUrl { get; private set; }
+    /// <summary>Quando a criança enviou a comprovação.</summary>
+    public DateTime? SubmittedAt { get; private set; }
+    /// <summary>Feedback do responsável ao rejeitar (ex.: "falta limpar a pia").</summary>
+    public string? ReviewerComment { get; private set; }
+
     /// <summary>
     /// Pontos de recompensa por concluir a missão, definidos pela prioridade.
     /// É uma propriedade calculada (get-only) — não há setter porque a regra é do domínio.
@@ -110,6 +118,58 @@ public class TaskItem : BaseEntity
             throw new DomainException("Não é possível abandonar uma missão já concluída.");
 
         Status = TaskStatus.Skipped;
+        Touch();
+    }
+
+    // ====================== Fluxo de aprovação com comprovação ======================
+
+    /// <summary>
+    /// A criança envia a foto de comprovação. A missão passa a aguardar a aprovação
+    /// do responsável (PendingReview). Pode ser reenviada (limpa o comentário anterior).
+    /// </summary>
+    public void SubmitForReview(string imageUrl)
+    {
+        if (Status is TaskStatus.Completed or TaskStatus.Skipped)
+            throw new DomainException($"Não é possível enviar comprovação de uma missão '{Status}'.");
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            throw new DomainException("A comprovação precisa de uma imagem.");
+
+        Status = TaskStatus.PendingReview;
+        SubmissionImageUrl = imageUrl.Trim();
+        SubmittedAt = DateTime.UtcNow;
+        ReviewerComment = null; // limpa feedback de uma rejeição anterior ao reenviar
+        Touch();
+    }
+
+    /// <summary>
+    /// O responsável aprova a comprovação. Só faz sentido partindo de PendingReview.
+    /// Os pontos são creditados pela camada de aplicação (Child.AddPoints).
+    /// </summary>
+    public void Approve()
+    {
+        if (Status == TaskStatus.Completed)
+            throw new DomainException("A missão já foi concluída.");
+        if (Status != TaskStatus.PendingReview)
+            throw new DomainException("A missão não está aguardando aprovação.");
+
+        Status = TaskStatus.Completed;
+        CompletedAt = DateTime.UtcNow;
+        Touch();
+    }
+
+    /// <summary>
+    /// O responsável rejeita a comprovação com um comentário. A missão volta para
+    /// InProgress (a criança refaz) e o comentário fica visível para ela.
+    /// </summary>
+    public void Reject(string comment)
+    {
+        if (Status != TaskStatus.PendingReview)
+            throw new DomainException("A missão não está aguardando aprovação.");
+        if (string.IsNullOrWhiteSpace(comment))
+            throw new DomainException("Informe o que precisa ser revisto.");
+
+        Status = TaskStatus.InProgress;
+        ReviewerComment = comment.Trim();
         Touch();
     }
 }
