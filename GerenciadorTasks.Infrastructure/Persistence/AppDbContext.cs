@@ -50,6 +50,7 @@ public class AppDbContext : DbContext, IUnitOfWork
             b.HasKey(t => t.Id);
             b.Property(t => t.Title).IsRequired().HasMaxLength(200);
             b.Property(t => t.Description).HasMaxLength(1000);
+            b.HasIndex(t => t.RecurrenceGroupId); // agrupa ocorrências da mesma recorrência
             // Enums viram int (padrão). DateOnly/TimeOnly: o EF Core 8+ já
             // mapeia nativamente no SQLite (sem conversão manual).
         });

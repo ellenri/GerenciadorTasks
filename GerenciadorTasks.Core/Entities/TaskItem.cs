@@ -37,6 +37,12 @@ public class TaskItem : BaseEntity
     public string? ReviewerComment { get; private set; }
 
     /// <summary>
+    /// Identificador que agrupa as ocorrências de uma mesma missão recorrente
+    /// (null para missão única). Não afeta o estado — só registra o vínculo.
+    /// </summary>
+    public Guid? RecurrenceGroupId { get; private set; }
+
+    /// <summary>
     /// Pontos de recompensa por concluir a missão, definidos pela prioridade.
     /// É uma propriedade calculada (get-only) — não há setter porque a regra é do domínio.
     /// </summary>
@@ -119,6 +125,13 @@ public class TaskItem : BaseEntity
 
         Status = TaskStatus.Skipped;
         Touch();
+    }
+
+    /// <summary>Vincula esta instância a um grupo de recorrência (missões geradas juntas).</summary>
+    public void SetRecurrenceGroup(Guid groupId)
+    {
+        if (groupId != Guid.Empty)
+            RecurrenceGroupId = groupId;
     }
 
     // ====================== Fluxo de aprovação com comprovação ======================

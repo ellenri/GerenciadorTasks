@@ -55,16 +55,17 @@ public class TasksController : ControllerBase
         return task is null ? NotFound() : Ok(task);
     }
 
-    /// POST /api/tasks — cria uma missão (201 Created + Location). Exclusivo do responsável.
+    /// POST /api/tasks — cria missão(ões). Para recorrência, gera várias instâncias.
+    /// Exclusivo do responsável.
     [HttpPost]
     [Authorize(Roles = "Parent")]
-    public async Task<ActionResult<TaskResponse>> Create(
+    public async Task<ActionResult<IReadOnlyList<TaskResponse>>> Create(
         [FromBody] CreateTaskRequest request, CancellationToken ct)
     {
         var createdById = User.GetUserId()
             ?? throw new DomainException("Usuário não autenticado.");
         var created = await _service.CreateAsync(request, createdById, ct);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+        return Ok(created);
     }
 
     /// POST /api/tasks/{id}/submit — a criança envia a foto de comprovação (multipart).

@@ -32,8 +32,12 @@ public class TaskService
         _unitOfWork = unitOfWork;
     }
 
-    /// Cria uma missão a partir do payload da API.
-    public async Task<TaskResponse> CreateAsync(
+    /// <summary>
+    /// Cria missão(ões) a partir do payload. Para recorrência semanal/2x, gera
+    /// instâncias independentes (uma por ocorrência) agrupadas por RecurrenceGroupId,
+    /// cobrindo as próximas 8 semanas a partir da data inicial.
+    /// </summary>
+    public async Task<IReadOnlyList<TaskResponse>> CreateAsync(
         CreateTaskRequest request, Guid createdById, CancellationToken ct)
     {
         // 1. Valida que a criança existe (regra de aplicação — não do domínio).
@@ -44,23 +48,71 @@ public class TaskService
         // 2. Traduz o payload (strings) para os tipos do domínio.
         var category = EnumMapper.FromSnakeCase<TaskCategory>(request.Category);
         var priority = EnumMapper.FromSnakeCase<TaskPriority>(request.Priority);
-        var date = DateOnly.Parse(request.ScheduledDate);
         var time = TimeOnly.Parse(request.ScheduledTime);
         int? duration = string.IsNullOrWhiteSpace(request.EstimatedDuration)
             ? null
             : int.Parse(request.EstimatedDuration);
 
-        // 3. Cria a entidade (o CONSTRUTOR valida invariantes: título, data, etc.).
-        var task = new TaskItem(
-            request.Title, category, priority, date, time,
-            request.AssignedTo, createdById,
-            request.Description, duration);
+        // 3. Recorrência: computa as datas das ocorrências.
+        var recurrence = EnumMapper.FromSnakeCase<RecurrenceType>(string.IsNullOrEmpty(request.RecurrenceType) ? "once" : request.RecurrenceType);
+        var dates = ComputeOccurrenceDates(recurrence, request.ScheduledDate, request.RecurrenceDays);
+        Guid? groupId = recurrence == RecurrenceType.Once ? null : Guid.NewGuid();
 
-        // 4. Rastreia a adição e confirma numa transação (Unit of Work).
-        await _tasks.AddAsync(task, ct);
+        // 4. Cria cada ocorrência (o CONSTRUTOR valida invariantes: título, data, etc.).
+        var created = new List<TaskItem>();
+        foreach (var date in dates)
+        {
+            var task = new TaskItem(
+                request.Title, category, priority, date, time,
+                request.AssignedTo, createdById,
+                request.Description, duration);
+            if (groupId.HasValue)
+                task.SetRecurrenceGroup(groupId.Value);
+            await _tasks.AddAsync(task, ct);
+            created.Add(task);
+        }
+
+        // 5. Rastreia as adições e confirma numa transação (Unit of Work).
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return TaskResponse.From(task);
+        return created.Select(TaskResponse.From).ToList();
+    }
+
+    /// <summary>
+    /// Computa as datas das ocorrências conforme o padrão de recorrência:
+    ///  - Once: apenas a data informada.
+    ///  - Weekly: 1 dia da semana, pelas próximas 8 semanas.
+    ///  - TwiceWeekly: 2 dias da semana, 8 ocorrências de cada (8 semanas).
+    /// </summary>
+    private static List<DateOnly> ComputeOccurrenceDates(RecurrenceType type, string scheduledDate, int[]? days)
+    {
+        var start = DateOnly.Parse(scheduledDate);
+        if (type == RecurrenceType.Once)
+            return new List<DateOnly> { start };
+
+        var daySet = (days ?? Array.Empty<int>())
+            .Select(d => (DayOfWeek)d)
+            .ToHashSet();
+        int expected = type == RecurrenceType.Weekly ? 1 : 2;
+        if (daySet.Count != expected)
+            throw new DomainException($"Para repetição ‘{EnumMapper.ToSnakeCase(type)}’, marque exatamente {expected} dia(s) da semana.");
+
+        // Gera 8 ocorrências por dia (cobre 8 semanas), a partir da data inicial.
+        var dates = new List<DateOnly>();
+        var countByDay = daySet.ToDictionary(d => d, _ => 0);
+        var d = start;
+        var safety = start.AddDays(365);
+        while (countByDay.Values.Any(c => c < 8))
+        {
+            if (daySet.Contains(d.DayOfWeek))
+            {
+                dates.Add(d);
+                countByDay[d.DayOfWeek]++;
+            }
+            d = d.AddDays(1);
+            if (d > safety) break;
+        }
+        return dates;
     }
 
     public async Task<IReadOnlyList<TaskResponse>> GetAllAsync(CancellationToken ct)
