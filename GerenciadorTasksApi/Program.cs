@@ -2,6 +2,7 @@ using GerenciadorTasks.Application.Abstractions;
 using GerenciadorTasks.Application.Services;
 using GerenciadorTasks.Infrastructure.Persistence;
 using GerenciadorTasks.Infrastructure.Security;
+using GerenciadorTasksApi.BackgroundServices;
 using GerenciadorTasksApi.ExceptionHandling;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
@@ -72,6 +73,10 @@ builder.Services.AddScoped<ChildService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RewardService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<ReminderService>();
+
+// Agendador de lembretes (background): dispara 'avisar antes / na hora' no tempo certo.
+builder.Services.AddHostedService<ReminderHostedService>();
 
 var app = builder.Build();
 

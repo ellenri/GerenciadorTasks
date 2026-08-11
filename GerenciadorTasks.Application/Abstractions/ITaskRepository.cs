@@ -12,6 +12,11 @@ public interface ITaskRepository
 {
     Task<TaskItem?> GetByIdAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<TaskItem>> ListAsync(CancellationToken ct = default);
+    /// <summary>
+    /// Missões com lembrete configurado e que ainda têm algum lembrete pendente
+    /// de envio. Usado pelo ReminderService (agendador) a cada tick.
+    /// </summary>
+    Task<IReadOnlyList<TaskItem>> ListWithRemindersAsync(CancellationToken ct = default);
     Task AddAsync(TaskItem task, CancellationToken ct = default);
     Task UpdateAsync(TaskItem task, CancellationToken ct = default);
 }

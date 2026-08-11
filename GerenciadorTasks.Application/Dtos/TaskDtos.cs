@@ -18,7 +18,9 @@ public record CreateTaskRequest(
     Guid AssignedTo,        // id da criança
     string? EstimatedDuration, // minutos como texto ("15", "30", ...)
     string RecurrenceType,     // "once" | "weekly" | "twice_weekly"
-    int[]? RecurrenceDays);    // DayOfWeek 0-6 (apenas weekly/twice_weekly)
+    int[]? RecurrenceDays,     // DayOfWeek 0-6 (apenas weekly/twice_weekly)
+    bool RemindAtStart = false,        // avisar a criança na hora marcada
+    int? ReminderMinutesBefore = null); // avisar X min antes (5/10/15/30)
 
 /// <summary>
 /// Payload que a API DEVOLVE. Leitura: do domínio para o JSON.
@@ -43,7 +45,9 @@ public record TaskResponse(
     string? SubmissionImageUrl,
     string? ReviewerComment,
     DateTime? SubmittedAt,
-    Guid? RecurrenceGroupId)
+    Guid? RecurrenceGroupId,
+    bool RemindAtStart,
+    int? ReminderMinutesBefore)
 {
     /// Factory: constrói o DTO a partir da entidade de domínio.
     /// Centraliza o mapeamento em um lugar só (Single Responsibility).
@@ -66,7 +70,9 @@ public record TaskResponse(
         SubmissionImageUrl: t.SubmissionImageUrl,
         ReviewerComment: t.ReviewerComment,
         SubmittedAt: t.SubmittedAt,
-        RecurrenceGroupId: t.RecurrenceGroupId);
+        RecurrenceGroupId: t.RecurrenceGroupId,
+        RemindAtStart: t.RemindAtStart,
+        ReminderMinutesBefore: t.ReminderMinutesBefore);
 }
 
 /// <summary>Payload para o responsável rejeitar uma comprovação (com comentário).</summary>

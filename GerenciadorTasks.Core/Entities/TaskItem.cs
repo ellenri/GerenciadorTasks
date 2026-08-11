@@ -42,6 +42,19 @@ public class TaskItem : BaseEntity
     /// </summary>
     public Guid? RecurrenceGroupId { get; private set; }
 
+    // ====================== Lembretes (lembrete antes / na hora) ======================
+    // Configuração (definida pelo responsável ao criar a missão) + estado de envio
+    // (controlado pelo ReminderService — os timestamps garantem idempotência:
+    // o agendador nunca reenvia o mesmo lembrete duas vezes).
+    /// <summary>Se verdadeiro, dispara um lembrete na hora marcada.</summary>
+    public bool RemindAtStart { get; private set; }
+    /// <summary>Minutos de antecedência para o lembrete (5/10/15/30), ou null.</summary>
+    public int? ReminderMinutesBefore { get; private set; }
+    /// <summary>Quando o lembrete de antecedência foi enviado (idempotência).</summary>
+    public DateTime? ReminderBeforeSentAt { get; private set; }
+    /// <summary>Quando o lembrete "na hora" foi enviado (idempotência).</summary>
+    public DateTime? ReminderAtStartSentAt { get; private set; }
+
     /// <summary>
     /// Pontos de recompensa por concluir a missão, definidos pela prioridade.
     /// É uma propriedade calculada (get-only) — não há setter porque a regra é do domínio.
@@ -66,7 +79,9 @@ public class TaskItem : BaseEntity
         Guid assignedToId,
         Guid createdById,
         string? description = null,
-        int? estimatedDurationMinutes = null)
+        int? estimatedDurationMinutes = null,
+        bool remindAtStart = false,
+        int? reminderMinutesBefore = null)
         : base()
     {
         if (string.IsNullOrWhiteSpace(title))
@@ -77,6 +92,8 @@ public class TaskItem : BaseEntity
             throw new DomainException("A missão precisa ter um responsável.");
         if (scheduledDate < DateOnly.FromDateTime(DateTime.UtcNow))
             throw new DomainException("A data da missão não pode estar no passado.");
+        if (reminderMinutesBefore is int mins && mins is not (5 or 10 or 15 or 30))
+            throw new DomainException("Os minutos de antecedência devem ser 5, 10, 15 ou 30.");
 
         Title = title.Trim();
         Category = category;
@@ -87,6 +104,8 @@ public class TaskItem : BaseEntity
         CreatedById = createdById;
         Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
         EstimatedDurationMinutes = estimatedDurationMinutes;
+        RemindAtStart = remindAtStart;
+        ReminderMinutesBefore = reminderMinutesBefore;
         Status = TaskStatus.Pending; // toda missão nova começa pendente
     }
 
@@ -132,6 +151,22 @@ public class TaskItem : BaseEntity
     {
         if (groupId != Guid.Empty)
             RecurrenceGroupId = groupId;
+    }
+
+    // ====================== Lembretes: registro de envio (idempotência) ======================
+
+    /// <summary>Registra o envio do lembrete de antecedência (chamado pelo ReminderService).</summary>
+    public void MarkReminderBeforeSent()
+    {
+        ReminderBeforeSentAt = DateTime.UtcNow;
+        Touch();
+    }
+
+    /// <summary>Registra o envio do lembrete "na hora" (chamado pelo ReminderService).</summary>
+    public void MarkReminderAtStartSent()
+    {
+        ReminderAtStartSentAt = DateTime.UtcNow;
+        Touch();
     }
 
     // ====================== Fluxo de aprovação com comprovação ======================

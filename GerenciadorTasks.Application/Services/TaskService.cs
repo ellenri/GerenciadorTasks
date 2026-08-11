@@ -65,7 +65,8 @@ public class TaskService
             var task = new TaskItem(
                 request.Title, category, priority, date, time,
                 request.AssignedTo, createdById,
-                request.Description, duration);
+                request.Description, duration,
+                request.RemindAtStart, request.ReminderMinutesBefore);
             if (groupId.HasValue)
                 task.SetRecurrenceGroup(groupId.Value);
             await _tasks.AddAsync(task, ct);

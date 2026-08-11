@@ -21,6 +21,13 @@ public class InMemoryTaskRepository : ITaskRepository
     public Task<IReadOnlyList<TaskItem>> ListAsync(CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<TaskItem>>(_store.Values.ToList());
 
+    public Task<IReadOnlyList<TaskItem>> ListWithRemindersAsync(CancellationToken ct = default)
+        => Task.FromResult<IReadOnlyList<TaskItem>>(
+            _store.Values.Where(t =>
+                (t.RemindAtStart || t.ReminderMinutesBefore != null)
+                && (t.ReminderBeforeSentAt == null || t.ReminderAtStartSentAt == null))
+            .ToList());
+
     public Task AddAsync(TaskItem task, CancellationToken ct = default)
     {
         _store[task.Id] = task;

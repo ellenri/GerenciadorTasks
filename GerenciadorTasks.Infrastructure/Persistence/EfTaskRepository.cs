@@ -24,6 +24,14 @@ public class EfTaskRepository : ITaskRepository
         // AsNoTracking: leitura sem rastreamento (mais rápido, não vamos modificar).
         => await _db.Tasks.AsNoTracking().ToListAsync(ct);
 
+    public async Task<IReadOnlyList<TaskItem>> ListWithRemindersAsync(CancellationToken ct = default)
+        // Sem AsNoTracking: o ReminderService vai MODIFICAR (marcar envio) e salvar.
+        // Filtra no SQL: só missões com lembrete configurado E com algum envio pendente.
+        => await _db.Tasks
+            .Where(t => (t.RemindAtStart || t.ReminderMinutesBefore != null)
+                        && (t.ReminderBeforeSentAt == null || t.ReminderAtStartSentAt == null))
+            .ToListAsync(ct);
+
     public Task AddAsync(TaskItem task, CancellationToken ct = default)
     {
         _db.Tasks.Add(task); // rastreia como "Added"; grava no SaveChanges

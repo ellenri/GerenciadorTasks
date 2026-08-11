@@ -174,4 +174,68 @@ public class TaskItemTests
         Assert.Equal(30, child.Points);
         Assert.Equal(TaskStatus.Completed, task.Status);
     }
+
+    // ====================== Lembretes (avisar antes / na hora) ======================
+
+    [Fact]
+    public void Constructor_ByDefault_ShouldDisableReminders()
+    {
+        var task = CreateValidTask();
+
+        Assert.False(task.RemindAtStart);
+        Assert.Null(task.ReminderMinutesBefore);
+        Assert.Null(task.ReminderBeforeSentAt);
+        Assert.Null(task.ReminderAtStartSentAt);
+    }
+
+    [Theory]
+    [InlineData(5)]
+    [InlineData(10)]
+    [InlineData(15)]
+    [InlineData(30)]
+    public void Constructor_WithValidReminderMinutes_ShouldSetConfig(int minutes)
+    {
+        var task = new TaskItem(
+            "Missão", TaskCategory.School, TaskPriority.Medium,
+            FutureDate, new TimeOnly(14, 0), ValidChildId, ValidCreatorId,
+            remindAtStart: true, reminderMinutesBefore: minutes);
+
+        Assert.True(task.RemindAtStart);
+        Assert.Equal(minutes, task.ReminderMinutesBefore);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(7)]
+    [InlineData(60)]
+    public void Constructor_WithInvalidReminderMinutes_ShouldThrowDomainException(int minutes)
+    {
+        Assert.Throws<DomainException>(() =>
+            new TaskItem(
+                "Missão", TaskCategory.School, TaskPriority.Medium,
+                FutureDate, new TimeOnly(14, 0), ValidChildId, ValidCreatorId,
+                reminderMinutesBefore: minutes));
+    }
+
+    [Fact]
+    public void MarkReminderBeforeSent_ShouldRecordTimestamp()
+    {
+        var task = CreateValidTask();
+        Assert.Null(task.ReminderBeforeSentAt);
+
+        task.MarkReminderBeforeSent();
+
+        Assert.NotNull(task.ReminderBeforeSentAt);
+    }
+
+    [Fact]
+    public void MarkReminderAtStartSent_ShouldRecordTimestamp()
+    {
+        var task = CreateValidTask();
+        Assert.Null(task.ReminderAtStartSentAt);
+
+        task.MarkReminderAtStartSent();
+
+        Assert.NotNull(task.ReminderAtStartSentAt);
+    }
 }

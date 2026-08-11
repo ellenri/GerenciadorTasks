@@ -9,5 +9,7 @@ public enum NotificationType
     RewardUnlocked,
     RewardRedeemed,
     TaskSkipped,
-    TaskSubmitted
+    TaskSubmitted,
+    /// <summary>Lembrete agendado (pelo ReminderService) para a criança fazer a missão.</summary>
+    TaskReminder
 }
